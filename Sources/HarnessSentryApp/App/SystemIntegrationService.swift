@@ -2,7 +2,7 @@ import AppKit
 import Foundation
 import HarnessSentryCore
 import ServiceManagement
-import UserNotifications
+@preconcurrency import UserNotifications
 
 @MainActor
 enum SystemIntegrationService {
