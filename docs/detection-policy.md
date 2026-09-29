@@ -17,6 +17,6 @@ Hook 不保存 Prompt 或原始命令，因此第 1 点不能自动证明。Git 
 
 ## 工作区外的常见开发路径
 
-只读打开或遍历 Maven、Gradle、npm、pnpm、Yarn、Node 版本管理器、Python/Go/Rust 包缓存、Android/DevEco/Xcode/Java SDK，以及 `/tmp`、`/private/tmp` 和当前用户系统临时目录中的测试夹具，属于常见开发行为，不因“工作区外”单独报警。相对路径先按会话工作区还原，避免把 `app/src/...` 从中间截成根目录路径。目录边界按完整路径段匹配，不放行整个 `~/.cache`、`~/Library` 或其他项目目录。
+只读打开或遍历 Maven、Gradle、npm、pnpm、Yarn、Node 版本管理器、Python/Go/Rust 包缓存、Android/DevEco/Xcode/Java SDK，以及 `/tmp`、`/private/tmp` 和当前用户系统临时目录中的测试夹具，属于常见开发行为，不因“工作区外”单独报警。Harness 读取自己管理的本地上下文资源也属于正常行为，例如 WorkBuddy 读取自己的 Skill、Claude Code 读取自己的会话记忆；这类边界由当前适配器的身份动态推导，不匹配 `SKILL.md` 等文件名，也不逐条维护资源路径。相对路径先按会话工作区还原，避免把 `app/src/...` 从中间截成根目录路径。目录边界按标准化后的完整路径段匹配，不放行整个 `~/.cache`、`~/Library`、其他 Harness 的数据域或其他项目目录。
 
-例外不适用于写入/创建、归档、上传或凭据路径。`.npmrc`、`.pypirc`、SSH/AWS 密钥等仍按敏感路径处理。对未列出的自定义缓存或 SDK 位置，先保留提示，用户可在核对后处理记录；不会根据目录名的模糊匹配全局放行。
+例外不适用于写入/创建、归档、上传或凭据路径。`.npmrc`、`.pypirc`、SSH/AWS 密钥等仍按敏感路径处理；一个 Harness 也不会自动继承另一个 Harness 的本地数据边界。对未列出的自定义缓存或 SDK 位置，先保留提示，用户可在核对后处理记录；不会根据资源文件名的模糊匹配全局放行。

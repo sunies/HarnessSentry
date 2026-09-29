@@ -119,7 +119,7 @@ public enum AnomalyRuleEngine {
            !target.isEmpty,
            (target.hasPrefix("/") || target.hasPrefix("~/")),
            !isWithin(target, root: cwd),
-           !isExpectedDevelopmentRead(target: target, type: event.type),
+           !isExpectedRead(event: event, target: target),
            [.fileOpen, .fileCreate, .fileWrite, .directoryTraversal].contains(event.type) {
             return finding(
                 event: event,
@@ -167,18 +167,85 @@ public enum AnomalyRuleEngine {
     }
 
     private static func isWithin(_ path: String, root: String) -> Bool {
-        path == root || path.hasPrefix(root.hasSuffix("/") ? root : root + "/")
+        let canonicalTarget = canonicalPath(path)
+        let canonicalRoot = canonicalPath(root)
+        return canonicalTarget == canonicalRoot || canonicalTarget.hasPrefix(canonicalRoot + "/")
     }
 
-    /// Dependency caches and SDKs are routinely read outside a project's cwd.
-    /// Only read/traversal events are exempt; writes, archives, uploads and
-    /// credential paths retain their normal evaluation.
-    private static func isExpectedDevelopmentRead(target: String, type: BehaviorType) -> Bool {
-        guard type == .fileOpen || type == .directoryTraversal else { return false }
+    /// Some read-only resources legitimately live outside a project's cwd:
+    /// dependency caches, SDKs, and the active harness's own local data. The
+    /// latter is derived from adapter identity instead of matching filenames
+    /// such as SKILL.md or enumerating every installation path.
+    ///
+    /// Writes, archives and uploads never reach this exception, and sensitive
+    /// credential checks run before it.
+    private static func isExpectedRead(event: BehaviorEvent, target: String) -> Bool {
+        guard event.type == .fileOpen || event.type == .directoryTraversal else { return false }
+        if isOwnedByHarness(target: target, toolID: event.toolID) { return true }
         let home = FileManager.default.homeDirectoryForCurrentUser.path.lowercased()
         let path = target == home ? "~" :
             (target.hasPrefix(home + "/") ? "~" + String(target.dropFirst(home.count)) : target)
         return developmentReadRoots.contains { isWithin(path, root: $0) }
+    }
+
+    /// Returns true when a read stays inside the invoking harness's own local
+    /// data boundary (for example `~/.workbuddy/...` for WorkBuddy). Directory
+    /// aliases are derived from the adapter model, so new resource types below
+    /// that boundary do not require filename or path regex updates.
+    private static func isOwnedByHarness(target: String, toolID: String) -> Bool {
+        guard let aliases = adapterDirectoryAliasesByID[toolID] else { return false }
+        let path = canonicalPath(target)
+        let home = canonicalPath("~")
+        guard isWithin(path, root: home), path != home else { return false }
+
+        let relative = path.dropFirst(home.count).drop(while: { $0 == "/" })
+        guard let firstComponent = relative.split(separator: "/", omittingEmptySubsequences: true).first,
+              firstComponent.hasPrefix(".") else { return false }
+        let directoryIdentity = normalizedIdentity(String(firstComponent.drop(while: { $0 == "." })))
+        guard !directoryIdentity.isEmpty else { return false }
+        return aliases.contains(directoryIdentity)
+    }
+
+    private static let adapterDirectoryAliasesByID: [String: Set<String>] = Dictionary(
+        uniqueKeysWithValues: BuiltInAdapters.all.map { adapter in
+            (adapter.id, makeAdapterDirectoryAliases(adapter))
+        }
+    )
+
+    private static func makeAdapterDirectoryAliases(_ adapter: HarnessAdapter) -> Set<String> {
+        let genericTokens: Set<String> = ["app", "cli", "code", "dev", "helper", "harness", "mac"]
+        let rawNames = [adapter.id, adapter.displayName] + adapter.executableNames + adapter.bundleIdentifiers
+        var aliases = Set(rawNames.map(normalizedIdentity).filter { !$0.isEmpty })
+        for name in rawNames {
+            let tokens = name.lowercased().split(whereSeparator: { !$0.isLetter && !$0.isNumber })
+            for token in tokens {
+                let value = String(token)
+                if value.count >= 3, !genericTokens.contains(value) {
+                    aliases.insert(normalizedIdentity(value))
+                }
+            }
+        }
+        return aliases
+    }
+
+    private static func normalizedIdentity(_ value: String) -> String {
+        String(value.lowercased().filter { $0.isLetter || $0.isNumber })
+    }
+
+    private static func canonicalPath(_ path: String) -> String {
+        let home = FileManager.default.homeDirectoryForCurrentUser.path
+        let expanded: String
+        if path == "~" {
+            expanded = home
+        } else if path.hasPrefix("~/") {
+            expanded = home + String(path.dropFirst())
+        } else {
+            expanded = path
+        }
+        // Collapse `.` and `..` lexically rather than resolving existing
+        // symlinks. This keeps roots such as macOS `/private/tmp` consistent
+        // with descendants that have not been created yet.
+        return URL(fileURLWithPath: expanded).standardized.path.lowercased()
     }
 
     private static let developmentReadRoots: [String] = [

@@ -205,6 +205,23 @@ struct HarnessSentrySelfTest {
             let event = BehaviorEvent(toolID: "codex", type: .fileOpen, target: path, evidence: .correlated, metadata: ["cwd": "~/work/app"])
             try expect(AnomalyRuleEngine.evaluate(event: event) == nil, "routine development read: \(path)")
         }
+        let harnessContextReads: [(String, String)] = [
+            ("workbuddy", "~/.workbuddy/skills/gzh-design/references/theme-red-white.md"),
+            ("codex", "~/.codex/skills/documents/SKILL.md"),
+            ("claude-code", "~/.claude/projects/example/memory/notes.md"),
+        ]
+        for (toolID, path) in harnessContextReads {
+            let event = BehaviorEvent(toolID: toolID, type: .fileOpen, target: path, evidence: .correlated, metadata: ["cwd": "~/work/app"])
+            try expect(AnomalyRuleEngine.evaluate(event: event) == nil, "harness-owned context read: \(toolID)")
+        }
+        let harnessContextTraversal = BehaviorEvent(toolID: "workbuddy", type: .directoryTraversal, target: "~/.workbuddy/skills/gzh-design", evidence: .correlated, metadata: ["cwd": "~/work/app"])
+        try expect(AnomalyRuleEngine.evaluate(event: harnessContextTraversal) == nil, "harness-owned context traversal")
+        let escapedHarnessPath = BehaviorEvent(toolID: "workbuddy", type: .fileOpen, target: "~/.workbuddy/../other-project/source.swift", evidence: .correlated, metadata: ["cwd": "~/work/app"])
+        try expect(AnomalyRuleEngine.evaluate(event: escapedHarnessPath)?.incident.title == "访问会话工作区之外的路径", "harness boundary rejects parent traversal")
+        let otherHarnessData = BehaviorEvent(toolID: "workbuddy", type: .fileOpen, target: "~/.codex/private-state.json", evidence: .correlated, metadata: ["cwd": "~/work/app"])
+        try expect(AnomalyRuleEngine.evaluate(event: otherHarnessData)?.incident.title == "访问会话工作区之外的路径", "one harness cannot inherit another harness boundary")
+        let harnessDataWrite = BehaviorEvent(toolID: "workbuddy", type: .fileWrite, target: "~/.workbuddy/skills/changed.md", evidence: .correlated, metadata: ["cwd": "~/work/app"])
+        try expect(AnomalyRuleEngine.evaluate(event: harnessDataWrite)?.incident.title == "访问会话工作区之外的路径", "harness-owned writes remain visible")
         let write = BehaviorEvent(toolID: "codex", type: .fileWrite, target: "~/.npm/_cacache/changed", evidence: .correlated, metadata: ["cwd": "~/work/app"])
         try expect(AnomalyRuleEngine.evaluate(event: write)?.incident.title == "访问会话工作区之外的路径", "cache writes remain visible")
         let temporaryWrite = BehaviorEvent(toolID: "claude-code", type: .fileWrite, target: "/tmp/offline-fixture/changed", evidence: .correlated, metadata: ["cwd": "~/work/app"])
