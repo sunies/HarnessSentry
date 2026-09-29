@@ -1,0 +1,44 @@
+name: Community Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: macos-15
+    timeout-minutes: 25
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Verify tag matches app version
+        run: |
+          version="$(plutil -extract CFBundleShortVersionString raw -o - Resources/Info.plist)"
+          test "$GITHUB_REF_NAME" = "v$version"
+
+      - name: Build and test
+        run: |
+          swift run HarnessSentrySelfTest
+          Scripts/package-release.sh
+
+      - name: Verify artifacts
+        run: |
+          cd dist
+          shasum -a 256 -c HarnessSentry-*.zip.sha256
+          unzip -tq HarnessSentry-*.zip
+
+      - name: Publish GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" \
+            dist/HarnessSentry-*.zip \
+            dist/HarnessSentry-*.zip.sha256 \
+            --title "HarnessSentry $GITHUB_REF_NAME" \
+            --notes "Community 构建采用 ad-hoc 签名，未经过 Apple 公证。首次运行可能需要用户在系统设置中确认。"

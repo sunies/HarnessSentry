@@ -1,0 +1,12 @@
+PRODUCT_BUNDLE_IDENTIFIER = com.harnesssentry.sensor.endpoint-security
+PRODUCT_NAME = HarnessSentryEndpointSecurity
+PRODUCT_BUNDLE_PACKAGE_TYPE = SYSX
+MACOSX_DEPLOYMENT_TARGET = 14.0
+SKIP_INSTALL = YES
+CODE_SIGN_ENTITLEMENTS = EndpointSecurityExtension/Configuration/EndpointSecurityExtension.entitlements
+INFOPLIST_FILE = EndpointSecurityExtension/Configuration/Info.plist
+LD_RUNPATH_SEARCH_PATHS = $(inherited) @executable_path/../Frameworks
+ENABLE_HARDENED_RUNTIME = YES
+
+// Set DEVELOPMENT_TEAM and signing identities in local/CI Xcode settings.
+// Never commit a personal Team ID or certificate name here.

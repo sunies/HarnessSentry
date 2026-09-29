@@ -1,0 +1,11 @@
+.build/
+dist/
+.DS_Store
+*.xcuserstate
+xcuserdata/
+DerivedData/
+*.p12
+*.cer
+*.provisionprofile
+*.mobileprovision
+AuthKey_*.p8

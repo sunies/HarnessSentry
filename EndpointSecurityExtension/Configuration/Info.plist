@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleDevelopmentRegion</key>
+	<string>$(DEVELOPMENT_LANGUAGE)</string>
+	<key>CFBundleDisplayName</key>
+	<string>HarnessSentry ES Sensor</string>
+	<key>CFBundleExecutable</key>
+	<string>$(EXECUTABLE_NAME)</string>
+	<key>CFBundleIdentifier</key>
+	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+	<key>CFBundleInfoDictionaryVersion</key>
+	<string>6.0</string>
+	<key>CFBundleName</key>
+	<string>$(PRODUCT_NAME)</string>
+	<key>CFBundlePackageType</key>
+	<string>SYSX</string>
+	<key>CFBundleShortVersionString</key>
+	<string>$(MARKETING_VERSION)</string>
+	<key>CFBundleVersion</key>
+	<string>$(CURRENT_PROJECT_VERSION)</string>
+	<key>LSMinimumSystemVersion</key>
+	<string>$(MACOSX_DEPLOYMENT_TARGET)</string>
+
+	<!-- Required for a non-DriverKit system extension. -->
+	<key>NSSystemExtensionUsageDescription</key>
+	<string>监测编程助手进程的文件行为元数据，用于发现异常外传风险；不读取文件内容。</string>
+
+	<!--
+	  The extension vends this read-only XPC endpoint. Keep the same value in
+	  Sources/ExtensionConfiguration.swift and the host-side client.
+	-->
+	<key>NSEndpointSecurityMachServiceName</key>
+	<string>$(DEVELOPMENT_TEAM).$(PRODUCT_BUNDLE_IDENTIFIER).xpc</string>
+	<key>HarnessSentryMachServiceName</key>
+	<string>$(DEVELOPMENT_TEAM).$(PRODUCT_BUNDLE_IDENTIFIER).xpc</string>
+	<key>HarnessSentryAllowedClientBundleIdentifier</key>
+	<string>com.harnesssentry.app</string>
+	<key>HarnessSentryAllowedTeamIdentifier</key>
+	<string>$(DEVELOPMENT_TEAM)</string>
+</dict>
+</plist>
